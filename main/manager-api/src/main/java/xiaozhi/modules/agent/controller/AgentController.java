@@ -267,6 +267,7 @@ public class AgentController {
 
     @GetMapping("/play/{uuid}")
     @Operation(summary = "播放音频")
+    @RequiresPermissions("sys:role:normal")
     public ResponseEntity<byte[]> playAudio(@PathVariable("uuid") String uuid) {
 
         String audioId = (String) redisUtils.get(RedisKeys.getAgentAudioIdKey(uuid));
@@ -274,6 +275,7 @@ public class AgentController {
             return ResponseEntity.notFound().build();
         }
 
+        requireAudioPermission(audioId);
         byte[] audioData = agentChatAudioService.getAudio(audioId);
         if (audioData == null) {
             return ResponseEntity.notFound().build();
@@ -287,7 +289,7 @@ public class AgentController {
 
     @PostMapping("/tag")
     @Operation(summary = "创建标签")
-    @RequiresPermissions("sys:role:normal")
+    @RequiresPermissions("sys:role:superAdmin")
     public Result<AgentTagEntity> createTag(@RequestBody Map<String, String> params) {
         String tagName = params.get("tagName");
         if (StringUtils.isBlank(tagName)) {
@@ -299,7 +301,7 @@ public class AgentController {
 
     @GetMapping("/tag/list")
     @Operation(summary = "获取所有标签列表")
-    @RequiresPermissions("sys:role:normal")
+    @RequiresPermissions("sys:role:superAdmin")
     public Result<List<AgentTagDTO>> getAllTags() {
         List<AgentTagDTO> tags = agentTagService.getAllTags();
         return new Result<List<AgentTagDTO>>().ok(tags);
@@ -307,7 +309,7 @@ public class AgentController {
 
     @DeleteMapping("/tag/{id}")
     @Operation(summary = "删除标签")
-    @RequiresPermissions("sys:role:normal")
+    @RequiresPermissions("sys:role:superAdmin")
     public Result<Void> deleteTag(@PathVariable String id) {
         agentTagService.deleteTag(id);
         return new Result<Void>().ok(null);

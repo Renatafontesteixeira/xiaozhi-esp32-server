@@ -19,6 +19,9 @@ public interface SysUserService extends BaseService<SysUserEntity> {
 
     void save(SysUserDTO dto);
 
+    /** Private provisioning: cannot create an administrator, including an empty database. */
+    void saveCommon(SysUserDTO dto);
+
     /**
      * 删除指定用户，且有关联的数据设备和智能体
      * 

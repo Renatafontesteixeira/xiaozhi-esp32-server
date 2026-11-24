@@ -52,6 +52,7 @@ import xiaozhi.modules.voiceclone.service.VoiceCloneService;
 public class ConfigServiceImpl implements ConfigService {
     private final SysParamsService sysParamsService;
     private final DeviceService deviceService;
+    private final xiaozhi.modules.sys.dao.SysUserDao ownerUsers;
     private final ModelConfigService modelConfigService;
     private final AgentService agentService;
     private final AgentTemplateService agentTemplateService;
@@ -141,6 +142,12 @@ public class ConfigServiceImpl implements ConfigService {
         if (agent == null) {
             throw new RenException(ErrorCode.AGENT_NOT_FOUND);
         }
+        xiaozhi.modules.agent.security.AgentOwnership.requireConsistent(device, agent);
+        var owner = ownerUsers.selectById(agent.getUserId());
+        if (owner == null || !Integer.valueOf(1).equals(owner.getStatus())) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
+        boolean personalToolsDenied = !Integer.valueOf(1).equals(owner.getSuperAdmin());
         // 获取音色信息
         String voice = null;
         String referenceAudio = null;
@@ -160,6 +167,9 @@ public class ConfigServiceImpl implements ConfigService {
         } else {
             VoiceCloneEntity voice_print = cloneVoiceService.selectById(agent.getTtsVoiceId());
             if (voice_print != null) {
+                if (!Objects.equals(agent.getUserId(), voice_print.getUserId())) {
+                    throw new RenException(ErrorCode.NO_PERMISSION);
+                }
                 voice = voice_print.getVoiceId();
                 // 优先使用用户选择的语言，如果没有则使用默认值
                 language = StringUtils.isNotBlank(agent.getTtsLanguage()) ? agent.getTtsLanguage() : "普通话";
@@ -192,7 +202,7 @@ public class ConfigServiceImpl implements ConfigService {
         }
 
         // 添加函数调用参数信息
-        if (!Objects.equals(agent.getIntentModelId(), "Intent_nointent")) {
+        if (!personalToolsDenied && !Objects.equals(agent.getIntentModelId(), "Intent_nointent")) {
             String agentId = agent.getId();
             List<AgentPluginMapping> pluginMappings = agentPluginMappingService.agentPluginParamsByAgentId(agentId);
             if (pluginMappings != null && !pluginMappings.isEmpty()) {
@@ -204,14 +214,14 @@ public class ConfigServiceImpl implements ConfigService {
             }
         }
         // 获取mcp接入点地址
-        String mcpEndpoint = agentMcpAccessPointService.getAgentMcpAccessAddress(agent.getId());
+        String mcpEndpoint = personalToolsDenied ? null : agentMcpAccessPointService.getAgentMcpAccessAddress(agent.getId());
         if (StringUtils.isNotBlank(mcpEndpoint) && mcpEndpoint.startsWith("ws")) {
             mcpEndpoint = mcpEndpoint.replace("/mcp/", "/call/");
             result.put("mcp_endpoint", mcpEndpoint);
         }
 
         // 获取上下文源配置
-        AgentContextProviderEntity contextProviderEntity = agentContextProviderService.getByAgentId(agent.getId());
+        AgentContextProviderEntity contextProviderEntity = personalToolsDenied ? null : agentContextProviderService.getByAgentId(agent.getId());
         if (contextProviderEntity != null && contextProviderEntity.getContextProviders() != null
                 && !contextProviderEntity.getContextProviders().isEmpty()) {
             result.put("context_providers", contextProviderEntity.getContextProviders());
@@ -244,6 +254,15 @@ public class ConfigServiceImpl implements ConfigService {
                 result,
                 true);
 
+        result.put("identity", Map.of("ownerId", agent.getUserId().toString(), "agentId", agent.getId()));
+        result.put("personal_tools_allowed", !personalToolsDenied);
+        if (personalToolsDenied) {
+            result.put("plugins", Collections.emptyMap());
+            result.put("mcp_endpoint", "");
+            result.put("context_providers", Collections.emptyList());
+            result.put("Intent", Map.of("Intent_nointent", Map.of("type", "nointent")));
+            ((Map<String, Object>) result.get("selected_module")).put("Intent", "Intent_nointent");
+        }
         return result;
     }
 
@@ -253,6 +272,8 @@ public class ConfigServiceImpl implements ConfigService {
         if (device == null) {
             return Collections.emptyList();
         }
+        xiaozhi.modules.agent.security.AgentOwnership.requireConsistent(
+                device, agentService.getAgentById(device.getAgentId()));
         List<CorrectWordSimpleVO> items = correctWordFileService.getAllItemsByAgentId(device.getAgentId());
         return items.stream()
                 .map(item -> item.getSourceWord() + "|" + item.getTargetWord())
@@ -456,7 +477,7 @@ public class ConfigServiceImpl implements ConfigService {
             }
             Map<String, Object> typeConfig = new HashMap<>();
             if (model.getConfigJson() != null) {
-                typeConfig.put(model.getId(), model.getConfigJson());
+                typeConfig.put(model.getId(), new HashMap<>(model.getConfigJson()));
                 // 如果是TTS类型，添加private_voice属性
                 if ("TTS".equals(modelTypes[i])) {
                     if (voice != null)

@@ -102,6 +102,9 @@ public class VoiceResourceController {
     @Operation(summary = "根据用户ID获取音色资源列表")
     @RequiresPermissions("sys:role:normal")
     public Result<List<VoiceCloneResponseDTO>> getByUserId(@PathVariable("userId") Long userId) {
+        if (userId == null || !userId.equals(xiaozhi.modules.security.user.SecurityUser.getUserId())) {
+            throw new xiaozhi.common.exception.RenException(ErrorCode.NO_PERMISSION);
+        }
         List<VoiceCloneResponseDTO> list = voiceCloneService.getByUserIdWithNames(userId);
         return new Result<List<VoiceCloneResponseDTO>>().ok(list);
     }

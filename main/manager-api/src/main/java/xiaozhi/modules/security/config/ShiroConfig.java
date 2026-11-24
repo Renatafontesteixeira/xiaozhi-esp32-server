@@ -94,10 +94,10 @@ public class ShiroConfig {
         filterMap.put("/config/**", "server");
         filterMap.put("/device/address-book/call", "server");
         filterMap.put("/agent/chat-history/report", "server");
-        filterMap.put("/agent/chat-history/download/**", "anon");
+        filterMap.put("/agent/chat-history/download/**", "oauth2");
         filterMap.put("/agent/chat-summary/**", "server");
         filterMap.put("/agent/chat-title/**", "server");
-        filterMap.put("/agent/play/**", "anon");
+        filterMap.put("/agent/play/**", "oauth2");
         filterMap.put("/voiceClone/play/**", "anon");
         filterMap.put("/**", "oauth2");
         shiroFilter.setFilterChainDefinitionMap(filterMap);

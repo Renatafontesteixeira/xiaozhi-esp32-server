@@ -80,7 +80,7 @@ class ConfigServiceImplTest {
     private static ConfigServiceImpl newService(SysParamsService sysParamsService, RedisUtils redisUtils) {
         return new ConfigServiceImpl(
                 sysParamsService,
-                mock(DeviceService.class),
+                mock(DeviceService.class), null,
                 mock(ModelConfigService.class),
                 mock(AgentService.class),
                 mock(AgentTemplateService.class),

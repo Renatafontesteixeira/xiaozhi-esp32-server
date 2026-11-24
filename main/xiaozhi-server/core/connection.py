@@ -799,6 +799,8 @@ class ConnectionHandler:
 
     async def _initialize_private_config_async(self):
         """从接口异步获取差异化配置（异步版本，不阻塞主循环）"""
+        self.owner_identity = None
+        self.personal_tools_allowed = False
         if not self.read_config_from_api:
             self.need_bind = False
             self.bind_completed_event.set()
@@ -810,6 +812,8 @@ class ConnectionHandler:
                 self.headers.get("device-id"),
                 self.headers.get("client-id", self.headers.get("device-id")),
             )
+            from core.utils.owner_identity import apply_server_identity
+            apply_server_identity(self, private_config)
             private_config["delete_audio"] = bool(self.config.get("delete_audio", True))
             private_config["tts_timeout"] = self.config.get("tts_timeout", 15)
             self.logger.bind(tag=TAG).info(

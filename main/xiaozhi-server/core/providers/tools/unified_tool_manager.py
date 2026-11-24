@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Any
 from config.logger import setup_logging
 from plugins_func.register import Action, ActionResponse
 from .base import ToolType, ToolDefinition, ToolExecutor
+from core.utils.owner_identity import tools_allowed
 
 
 class ToolManager:
@@ -29,6 +30,8 @@ class ToolManager:
 
     def get_all_tools(self) -> Dict[str, ToolDefinition]:
         """获取所有工具定义"""
+        if not tools_allowed(self.conn):
+            return {}
         if self._cached_tools is not None:
             return self._cached_tools
 
@@ -51,6 +54,8 @@ class ToolManager:
 
         返回缓存的浅拷贝，防止调用方就地修改污染缓存。
         """
+        if not tools_allowed(self.conn):
+            return []
         if self._cached_function_descriptions is not None:
             return list(self._cached_function_descriptions)
 
@@ -77,6 +82,8 @@ class ToolManager:
         self, tool_name: str, arguments: Dict[str, Any]
     ) -> ActionResponse:
         """执行工具调用"""
+        if not tools_allowed(self.conn):
+            return ActionResponse(action=Action.ERROR, response="Personal tools are not authorized")
         try:
             # 查找工具类型
             tool_type = self.get_tool_type(tool_name)
