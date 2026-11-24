@@ -101,6 +101,7 @@ public class AgentChatHistoryController {
      */
     @Operation(summary = "下载本会话聊天记录")
     @GetMapping("/download/{uuid}/current")
+    @RequiresPermissions("sys:role:normal")
     public void downloadCurrentSession(@PathVariable("uuid") String uuid,
             HttpServletResponse response) {
         // 从Redis获取agentId和sessionId
@@ -109,6 +110,10 @@ public class AgentChatHistoryController {
             throw new RenException(ErrorCode.DOWNLOAD_LINK_EXPIRED);
         }
 
+        String ticketAgent = agentSessionInfo.split(":", 2)[0];
+        if (!agentService.checkAgentPermission(ticketAgent, SecurityUser.getUserId())) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         try {
             // 解析agentId和sessionId
             String[] parts = agentSessionInfo.split(":");
@@ -134,6 +139,7 @@ public class AgentChatHistoryController {
      */
     @Operation(summary = "下载本会话及前20条会话聊天记录")
     @GetMapping("/download/{uuid}/previous")
+    @RequiresPermissions("sys:role:normal")
     public void downloadCurrentSessionWithPrevious(@PathVariable("uuid") String uuid,
             HttpServletResponse response) {
         // 从Redis获取agentId和sessionId
@@ -142,6 +148,10 @@ public class AgentChatHistoryController {
             throw new RenException(ErrorCode.DOWNLOAD_LINK_EXPIRED);
         }
 
+        String ticketAgent = agentSessionInfo.split(":", 2)[0];
+        if (!agentService.checkAgentPermission(ticketAgent, SecurityUser.getUserId())) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         try {
             // 解析agentId和sessionId
             String[] parts = agentSessionInfo.split(":");

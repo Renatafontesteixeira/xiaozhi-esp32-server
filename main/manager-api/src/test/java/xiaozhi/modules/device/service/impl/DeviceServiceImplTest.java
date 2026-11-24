@@ -142,7 +142,7 @@ class DeviceServiceImplTest {
     private DeviceServiceImpl serviceWithDao(DeviceDao dao, DeviceAddressBookService addressBookService) {
         // baseDao 由父类持有，子类内部赋给 this，测试类自己碰不到它
         return new DeviceServiceImpl(
-                dao, mock(SysUserUtilService.class), mock(SysParamsService.class),
+                dao, null, mock(SysUserUtilService.class), mock(SysParamsService.class),
                 mock(RedisUtils.class), mock(OtaService.class), addressBookService) {
             {
                 this.baseDao = dao;

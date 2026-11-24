@@ -73,6 +73,7 @@ import xiaozhi.modules.sys.service.SysUserUtilService;
 public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> implements DeviceService {
 
     private final DeviceDao deviceDao;
+    private final xiaozhi.modules.agent.dao.AgentDao ownerAgents;
     private final SysUserUtilService sysUserUtilService;
     private final SysParamsService sysParamsService;
     private final RedisUtils redisUtils;
@@ -99,6 +100,8 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
 
     @Override
     public Boolean deviceActivation(String agentId, String activationCode) {
+        xiaozhi.modules.agent.security.AgentOwnership.requireOwner(
+                ownerAgents.selectById(agentId), SecurityUser.getUserId());
         if (StringUtils.isBlank(activationCode)) {
             throw new RenException(ErrorCode.ACTIVATION_CODE_EMPTY);
         }
@@ -578,6 +581,11 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
 
     @Override
     public void manualAddDevice(Long userId, DeviceManualAddDTO dto) {
+        if (!java.util.Objects.equals(userId, SecurityUser.getUserId())) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
+        xiaozhi.modules.agent.security.AgentOwnership.requireOwner(
+                ownerAgents.selectById(dto.getAgentId()), userId);
         // 检查mac是否已存在
         QueryWrapper<DeviceEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("mac_address", dto.getMacAddress());

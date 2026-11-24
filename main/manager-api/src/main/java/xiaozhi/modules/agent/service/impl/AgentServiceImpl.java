@@ -116,6 +116,10 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         agent.setCurrentVersionNo(agentSnapshotService.getCurrentVersionNo(id));
 
         // 无需额外查询插件列表，已通过SQL查询出来
+        if (SecurityUser.getUserId() != null && !isCurrentUserSuperAdmin()) {
+            agent.setFunctions(java.util.Collections.emptyList());
+            agent.setContextProviders(java.util.Collections.emptyList());
+        }
         return agent;
     }
 
@@ -150,9 +154,6 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (agent == null) {
             return false;
         }
-        if (isCurrentUserSuperAdmin()) {
-            return true;
-        }
         return userId != null && userId.equals(agent.getUserId());
     }
 
@@ -165,9 +166,6 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     private boolean hasDevicePermission(DeviceEntity device, Long userId) {
         if (device == null) {
             return false;
-        }
-        if (isCurrentUserSuperAdmin()) {
-            return true;
         }
         return userId != null && userId.equals(device.getUserId());
     }
@@ -333,7 +331,12 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (StringUtils.isEmpty(macAddress)) {
             return null;
         }
-        return agentDao.getDefaultAgentByMacAddress(macAddress);
+        AgentEntity agent = agentDao.getDefaultAgentByMacAddress(macAddress);
+        if (agent != null) {
+            xiaozhi.modules.agent.security.AgentOwnership.requireConsistent(
+                    deviceService.getDeviceByMacAddress(macAddress), agent);
+        }
+        return agent;
     }
 
     @Override
@@ -363,6 +366,12 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     }
 
     private void updateAgentById(String agentId, AgentUpdateDTO dto, Long userId, boolean createSnapshot) {
+        if (SecurityUser.getUserId() != null && !isCurrentUserSuperAdmin()
+                && (dto.getFunctions() != null || dto.getContextProviders() != null
+                    || dto.getIntentModelId() != null || dto.getTagIds() != null
+                    || dto.getTagNames() != null || dto.getCorrectWordFileIds() != null)) {
+            throw new RenException(ErrorCode.NO_PERMISSION);
+        }
         AgentEntity lockedAgent = agentDao.selectByIdForUpdate(agentId);
         if (lockedAgent == null) {
             throw new RenException(ErrorCode.AGENT_NOT_FOUND);
@@ -666,8 +675,9 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         // 设置默认插件
         List<AgentPluginMapping> toInsert = new ArrayList<>();
         // 播放音乐、查天气、查新闻
-        String[] pluginIds = new String[] { "SYSTEM_PLUGIN_MUSIC", "SYSTEM_PLUGIN_WEATHER",
-                "SYSTEM_PLUGIN_NEWS_NEWSNOW" };
+        String[] pluginIds = Integer.valueOf(1).equals(user.getSuperAdmin())
+                ? new String[] { "SYSTEM_PLUGIN_MUSIC", "SYSTEM_PLUGIN_WEATHER", "SYSTEM_PLUGIN_NEWS_NEWSNOW" }
+                : new String[0];
         for (String pluginId : pluginIds) {
             ModelProviderDTO provider = modelProviderService.getById(pluginId);
             if (provider == null) {

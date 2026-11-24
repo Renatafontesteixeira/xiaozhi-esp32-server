@@ -8,6 +8,7 @@ from plugins_func.loadplugins import auto_import_modules
 from .base import ToolType
 from plugins_func.register import Action, ActionResponse
 from .unified_tool_manager import ToolManager
+from core.utils.owner_identity import tools_allowed
 from .server_plugins import ServerPluginExecutor
 from .server_mcp import ServerMCPExecutor
 from .device_iot import DeviceIoTExecutor
@@ -56,6 +57,9 @@ class UnifiedToolHandler:
 
     async def _initialize(self):
         """异步初始化"""
+        if not tools_allowed(self.conn):
+            self.finish_init = True
+            return
         try:
             # 自动导入插件模块
             auto_import_modules("plugins_func.functions")
@@ -140,6 +144,8 @@ class UnifiedToolHandler:
         self, conn, function_call_data: Dict[str, Any]
     ) -> Optional[ActionResponse]:
         """处理LLM函数调用"""
+        if not tools_allowed(self.conn):
+            return ActionResponse(action=Action.ERROR, response="Personal tools are not authorized")
         try:
             # 处理多函数调用
             if "function_calls" in function_call_data:

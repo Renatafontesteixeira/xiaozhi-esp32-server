@@ -70,6 +70,15 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void save(SysUserDTO dto) {
+        saveUser(dto, true);
+    }
+
+    @Override
+    public void saveCommon(SysUserDTO dto) {
+        saveUser(dto, false);
+    }
+
+    private void saveUser(SysUserDTO dto, boolean allowInitialAdmin) {
         SysUserEntity entity = ConvertUtils.sourceToTarget(dto, SysUserEntity.class);
 
         // 密码强度
@@ -83,7 +92,7 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
 
         // 保存用户
         Long userCount = getUserCount();
-        if (userCount == 0) {
+        if (allowInitialAdmin && userCount == 0) {
             entity.setSuperAdmin(SuperAdminEnum.YES.value());
         } else {
             entity.setSuperAdmin(SuperAdminEnum.NO.value());
