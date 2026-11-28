@@ -208,6 +208,7 @@ databaseChangeLog:
   - changeSet:
       id: 202506091720
       author: shane0411
+      validCheckSum: "8:66f6ea6d5fa14ebbdb596c7dc5a02608"
       changes:
         - sqlFile:
             encoding: utf8
