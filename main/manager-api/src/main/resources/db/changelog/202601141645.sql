@@ -1,22 +1,24 @@
 -- 批量清理 ai_model_provider 中的 sample_rate 字段定义
-UPDATE `ai_model_provider` ap
+-- Remove each matching object without JSON_TABLE, which TiDB 8.5 does not support.
+UPDATE ai_model_provider AS provider
 JOIN (
-    SELECT 
-        id,
-        JSON_ARRAYAGG(
-            JSON_OBJECT('key', jt.k, 'label', jt.l, 'type', jt.t)
-        ) AS new_fields
-    FROM `ai_model_provider`,
-         JSON_TABLE(`fields`, '$[*]' COLUMNS (
-             k VARCHAR(50) PATH '$.key',
-             l VARCHAR(100) PATH '$.label',
-             t VARCHAR(20) PATH '$.type'
-         )) AS jt
-    WHERE `model_type` = 'TTS' 
-      AND jt.k != 'sample_rate'
-    GROUP BY id
-) filtered ON ap.id = filtered.id
-SET ap.fields = filtered.new_fields;
+    WITH RECURSIVE cleaned (id, fields) AS (
+        SELECT id, fields
+        FROM ai_model_provider
+        WHERE model_type = 'TTS'
+          AND JSON_SEARCH(fields, 'one', 'sample!_rate', '!', '$[*].key') IS NOT NULL
+        UNION ALL
+        SELECT id,
+            JSON_REMOVE(fields, REPLACE(
+                JSON_UNQUOTE(JSON_SEARCH(fields, 'one', 'sample!_rate', '!', '$[*].key')), '.key', ''
+            ))
+        FROM cleaned
+        WHERE JSON_SEARCH(fields, 'one', 'sample!_rate', '!', '$[*].key') IS NOT NULL
+    )
+    SELECT id, fields FROM cleaned
+    WHERE JSON_SEARCH(fields, 'one', 'sample!_rate', '!', '$[*].key') IS NULL
+) AS filtered ON provider.id = filtered.id
+SET provider.fields = filtered.fields;
 
 -- 清理 config_json 顶层的 sample_rate
 UPDATE `ai_model_config`
