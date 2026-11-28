@@ -264,6 +264,14 @@ async def get_agent_models(
     )
 
 
+@api_guard(raise_when_closed=True)
+async def get_synthetic_integration_credential(instance, device_id, owner_id, agent_id):
+    return await instance._execute_async_request(
+        "POST", "/config/max-synthetic-credential",
+        json={"deviceId": device_id, "ownerId": owner_id, "agentId": agent_id},
+    )
+
+
 @api_guard("获取替换词失败")
 async def get_correct_words(instance, mac_address: str) -> Optional[Dict]:
     """获取智能体替换词"""

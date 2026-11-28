@@ -4,6 +4,7 @@
 def apply_server_identity(conn, config):
     conn.owner_identity = None
     conn.personal_tools_allowed = False
+    conn.synthetic_tool_allowed = False
     identity = config.get("identity")
     if (not isinstance(identity, dict)
             or not isinstance(identity.get("ownerId"), str)
@@ -13,6 +14,7 @@ def apply_server_identity(conn, config):
         raise ValueError("Authorized agent identity required")
     conn.owner_identity = (identity["ownerId"], identity["agentId"])
     conn.personal_tools_allowed = config.get("personal_tools_allowed") is True
+    conn.synthetic_tool_allowed = config.get("synthetic_tool_allowed") is True
 
 
 def tools_allowed(conn):

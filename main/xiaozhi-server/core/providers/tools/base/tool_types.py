@@ -10,6 +10,7 @@ from plugins_func.register import Action
 class ToolType(Enum):
     """工具类型枚举"""
 
+    SYNTHETIC_INTEGRATION = "synthetic_integration"
     SERVER_PLUGIN = "server_plugin"  # 服务端插件
     SERVER_MCP = "server_mcp"  # 服务端MCP
     DEVICE_IOT = "device_iot"  # 设备端IoT

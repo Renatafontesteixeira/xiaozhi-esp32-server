@@ -5,6 +5,7 @@ from config.logger import setup_logging
 from plugins_func.register import Action, ActionResponse
 from .base import ToolType, ToolDefinition, ToolExecutor
 from core.utils.owner_identity import tools_allowed
+from .synthetic_integration import SyntheticIntegrationExecutor
 
 
 class ToolManager:
@@ -16,6 +17,13 @@ class ToolManager:
         self.executors: Dict[ToolType, ToolExecutor] = {}
         self._cached_tools: Optional[Dict[str, ToolDefinition]] = None
         self._cached_function_descriptions: Optional[List[Dict[str, Any]]] = None
+        self.register_executor(ToolType.SYNTHETIC_INTEGRATION, SyntheticIntegrationExecutor())
+
+    def synthetic_only(self):
+        return (self.conn.config.get("read_config_from_api") is True
+                and getattr(self.conn, "owner_identity", None) is not None
+                and getattr(self.conn, "synthetic_tool_allowed", False) is True
+                and not tools_allowed(self.conn))
 
     def register_executor(self, tool_type: ToolType, executor: ToolExecutor):
         """注册工具执行器"""
@@ -30,6 +38,8 @@ class ToolManager:
 
     def get_all_tools(self) -> Dict[str, ToolDefinition]:
         """获取所有工具定义"""
+        if self.synthetic_only():
+            return self.executors[ToolType.SYNTHETIC_INTEGRATION].get_tools()
         if not tools_allowed(self.conn):
             return {}
         if self._cached_tools is not None:
@@ -37,6 +47,8 @@ class ToolManager:
 
         all_tools = {}
         for tool_type, executor in self.executors.items():
+            if tool_type == ToolType.SYNTHETIC_INTEGRATION:
+                continue
             try:
                 tools = executor.get_tools()
                 for name, definition in tools.items():
@@ -54,6 +66,8 @@ class ToolManager:
 
         返回缓存的浅拷贝，防止调用方就地修改污染缓存。
         """
+        if self.synthetic_only():
+            return [tool.description for tool in self.get_all_tools().values()]
         if not tools_allowed(self.conn):
             return []
         if self._cached_function_descriptions is not None:
@@ -82,7 +96,7 @@ class ToolManager:
         self, tool_name: str, arguments: Dict[str, Any]
     ) -> ActionResponse:
         """执行工具调用"""
-        if not tools_allowed(self.conn):
+        if not tools_allowed(self.conn) and not (self.synthetic_only() and self.has_tool(tool_name)):
             return ActionResponse(action=Action.ERROR, response="Personal tools are not authorized")
         try:
             # 查找工具类型
@@ -102,7 +116,8 @@ class ToolManager:
                 )
 
             # 执行工具
-            self.logger.info(f"执行工具: {tool_name}，参数: {arguments}")
+            if tool_type != ToolType.SYNTHETIC_INTEGRATION:
+                self.logger.info(f"执行工具: {tool_name}，参数: {arguments}")
             result = await executor.execute(self.conn, tool_name, arguments)
             self.logger.debug(f"工具执行结果: {result}")
             return result

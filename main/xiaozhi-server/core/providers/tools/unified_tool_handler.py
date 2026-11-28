@@ -144,7 +144,7 @@ class UnifiedToolHandler:
         self, conn, function_call_data: Dict[str, Any]
     ) -> Optional[ActionResponse]:
         """处理LLM函数调用"""
-        if not tools_allowed(self.conn):
+        if not tools_allowed(self.conn) and not self.tool_manager.synthetic_only():
             return ActionResponse(action=Action.ERROR, response="Personal tools are not authorized")
         try:
             # 处理多函数调用
@@ -166,11 +166,14 @@ class UnifiedToolHandler:
                 try:
                     arguments = json.loads(arguments) if arguments else {}
                 except json.JSONDecodeError:
-                    self.logger.error(f"无法解析函数参数: {arguments}")
+                    self.logger.error("无法解析函数参数")
                     return ActionResponse(
                         action=Action.ERROR,
                         response="无法解析函数参数",
                     )
+
+            if self.tool_manager.synthetic_only():
+                return await self.tool_manager.execute_tool(function_name, arguments)
 
             self.logger.debug(f"调用函数: {function_name}, 参数: {arguments}")
 
