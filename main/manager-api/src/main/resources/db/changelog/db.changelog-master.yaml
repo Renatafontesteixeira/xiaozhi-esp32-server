@@ -216,6 +216,7 @@ databaseChangeLog:
   - changeSet:
       id: 202506161101
       author: hrz
+      validCheckSum: "8:5219b433874bfb549c0d400f7e23c3fb"
       changes:
         - sqlFile:
             encoding: utf8
@@ -491,6 +492,7 @@ databaseChangeLog:
   - changeSet:
       id: 202601141645
       author: RanChen
+      validCheckSum: "8:5f7f7b5458de01db2caeef717f45d9c3"
       changes:
         - sqlFile:
             encoding: utf8
@@ -708,6 +710,7 @@ databaseChangeLog:
   - changeSet:
       id: 202607101200
       author: tykechen
+      validCheckSum: "8:aeb7245e4a6b73184c13a4c670a7c570"
       changes:
         - sqlFile:
             encoding: utf8
