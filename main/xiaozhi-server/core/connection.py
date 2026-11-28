@@ -801,6 +801,7 @@ class ConnectionHandler:
         """从接口异步获取差异化配置（异步版本，不阻塞主循环）"""
         self.owner_identity = None
         self.personal_tools_allowed = False
+        self.synthetic_tool_allowed = False
         if not self.read_config_from_api:
             self.need_bind = False
             self.bind_completed_event.set()
